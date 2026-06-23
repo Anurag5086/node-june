@@ -6,7 +6,7 @@ const cors = require('cors')
 const fileRoutes = require('./routes/fileRoutes')
 
 app.use(cors({
-    origin: ['http://localhost:5173']
+    origin: ['https://file-uploader-blush.vercel.app']
 }))
 
 app.use('/api/file', fileRoutes)
