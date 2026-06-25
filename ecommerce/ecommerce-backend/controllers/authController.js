@@ -1,8 +1,9 @@
 const User = require('../models/User')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const { userRegistrationSchema } = require('../utils/validators')
+const { userRegistrationSchema, userLoginSchema, verifyOtpSchema, resendOtpSchema } = require('../utils/validators')
 const { generateOtp, generateOtpExpiry } = require('../utils/common')
+const sendEmailForOtp = require('../utils/nodemailer')
 
 exports.registerUser = async (req, res) => {
     try{
@@ -21,7 +22,7 @@ exports.registerUser = async (req, res) => {
         const otp = generateOtp()
         const otpExpiry = generateOtpExpiry()
 
-        const hashedPassword = await bcrypt.hash(password, process.env.SALTS)
+        const hashedPassword = await bcrypt.hash(password, parseInt(process.env.SALTS))
 
         const newUser = new User({
             name,
@@ -33,9 +34,167 @@ exports.registerUser = async (req, res) => {
 
         await newUser.save()
 
-        // await sendEmailForOtp(email, otp)
+        const isMailSent = await sendEmailForOtp(email, otp)
+
+        if(!isMailSent){
+            res.status(500).json({ success: false, message: "Failed to send OTP email. Check server mail config!"})
+        }
 
         res.status(201).json({ success: true, message: "User registered successfully!"})
+    }catch(err){
+        res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
+    }
+}
+
+exports.verifyOtp = async (req, res) => {
+    try{
+        const { email, otp } = req.body
+        
+        const { error } = verifyOtpSchema.validate({ email, otp })
+        if(error){
+            res.status(400).json({ success: false, message: "Invalid Input!", error: error.details[0].message })
+        }
+
+        const user = await User.findOne({ email })
+        if(!user){
+            res.status(404).json({ success: false, message: "Email not found!" })
+        }
+
+        if(user.otp !== otp || user.otpExpiry < new Date()){
+            res.status(400).json({ success: false, message: "Invalid or expired OTP!"})
+        }
+
+        user.isVerified = true
+        user.otp = undefined
+        user.otpExpiry = undefined
+
+        await user.save()
+
+        const token = jwt.sign({
+            userId: user._id,
+            role: user.role
+        }, process.env.JWT_SECRET,
+        { expiresIn: '7d'})
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        }).status(200).json({ success: true, message: "Logged in successfully!"})
+    }catch(err){
+        res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
+    }
+}
+
+exports.verifyOtpForForgetPassword = async (req, res) => {
+    try{
+        const { email, otp } = req.body
+        
+        const { error } = verifyOtpSchema.validate({ email, otp })
+        if(error){
+            res.status(400).json({ success: false, message: "Invalid Input!", error: error.details[0].message })
+        }
+
+        const user = await User.findOne({ email })
+        if(!user){
+            res.status(404).json({ success: false, message: "Email not found!" })
+        }
+
+        if(user.resetPasswordOtp !== otp || user.resetPasswordOtpExpiry < new Date()){
+            res.status(400).json({ success: false, message: "Invalid or expired OTP!"})
+        }
+
+        user.resetPasswordOtp = undefined
+        user.resetPasswordOtpExpiry = undefined
+
+        await user.save()
+
+        const token = jwt.sign({
+            userId: user._id,
+            role: user.role
+        }, process.env.JWT_SECRET,
+        { expiresIn: '7d'})
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        }).status(200).json({ success: true, message: "Logged in successfully!"})
+    }catch(err){
+        res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
+    }
+}
+
+exports.resendOtp = async (req, res) => {
+    try{
+        const { email } = req.body
+
+        const { error } = resendOtpSchema.validate({ email })
+        if(error){
+            res.status(400).json({ success: false, message: "Invalid Input!", error: error.details[0].message })
+        }
+
+        const user = await User.findOne({ email })
+        if(!user){
+            res.status(404).json({ success: false, message: "Email not found!" })
+        }
+
+        const otp = generateOtp()
+        const otpExpiry = generateOtpExpiry()
+
+        user.otp = otp
+        user.otpExpiry = otpExpiry
+        await user.save()
+
+        const isMailSent = await sendEmailForOtp(email, otp)
+
+        if(!isMailSent){
+            res.status(500).json({ success: false, message: "Failed to send OTP email. Check server mail config!"})
+        }
+
+        res.status(200).json({ success: true, message: "OTP resent successfully!" })
+    }catch(err){
+        res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
+    }
+}
+
+exports.loginUser = async (req, res) => {
+    try{
+        const { email, password } = req.body
+
+        const { error } = userLoginSchema.validate({ email, password })
+        if(error){
+            res.status(400).json({ success: false, message: "Invalid Input!", error: error.details[0].message })
+        }
+
+        const user = await User.findOne({ email })
+        if(!user){
+            res.status(404).json({ success: false, message: "Email not found!" })
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password)
+        if(!isMatch){
+            res.status(400).json({ success: false, message: "Incorrect Password!"})
+        }
+
+        if(user.isVerified){
+            const token = jwt.sign({
+                userId: user._id,
+                role: user.role
+            }, process.env.JWT_SECRET,
+            { expiresIn: '7d'})
+
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            }).status(200).json({ success: true, message: "Logged in successfully!"})
+        }
+
+        res.status(200).json({ success: true, message: "Login successful, but email is not verified!", token: null, isVerified: user.isVerified })
     }catch(err){
         res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
     }

@@ -6,6 +6,23 @@ const userRegistrationSchema = joi.object({
     password: joi.string().min(6).required()
 })
 
+const userLoginSchema = joi.object({
+    email: joi.string().email().required(),
+    password: joi.string().min(6).required()
+})
+
+const verifyOtpSchema = joi.object({
+    email: joi.string().email().required(),
+    otp: joi.string().min(6).max(6).required()
+})
+
+const resendOtpSchema = joi.object({
+    email: joi.string().email().required()
+})
+
 module.exports = {
-    userRegistrationSchema
+    userRegistrationSchema,
+    userLoginSchema,
+    verifyOtpSchema,
+    resendOtpSchema
 }
