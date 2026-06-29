@@ -6,11 +6,17 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const authRoutes = require('./routes/authRoutes')
 const userRoutes = require('./routes/userRoutes')
+const categoryRoutes = require('./routes/categoryRoutes')
+const productRoutes = require('./routes/productRoutes')
 
 app.use(express.json())
 app.use(cookieParser())
+
+// Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api/category', categoryRoutes)
+app.use('/api/product', productRoutes)
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log("MongoDB connected!"))
