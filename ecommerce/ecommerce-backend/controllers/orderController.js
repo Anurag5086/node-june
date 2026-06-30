@@ -1,16 +1,21 @@
 const Order = require('../models/Order')
 const { updateOrderStatusSchema, createOrderSchema } = require('../utils/validators')
+const { validateAndBuildOrderProducts, decrementStock } = require('../utils/orderHelpers')
 
 exports.getAllOrders = async (req, res) => {
     try{
         const orders = await Order.find()
-        if(orders.length < 1){
-            res.status(404).json({ success: false, message: "No orders found!" })
-        }
+            .populate('products.product')
+            .populate('userId', 'name email')
+            .sort({ createdAt: -1 })
 
-        res.status(200).json({ success: true, message: "Successfully fetched all orders!", orders })
+        return res.status(200).json({
+            success: true,
+            message: orders.length ? 'Successfully fetched all orders!' : 'No orders found!',
+            orders,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!' })
+        return res.status(500).json({ success: false, message: 'Internal Server Error!' })
     }
 }
 
@@ -18,14 +23,17 @@ exports.getAllOrdersForUser = async (req, res) => {
     try{
         const userId = req.user.userId
 
-        const orders = await Order.find({ userId})
-        if(orders.length < 1){
-            res.status(404).json({ success: false, message: "No orders found!" })
-        }
+        const orders = await Order.find({ userId })
+            .populate('products.product')
+            .sort({ createdAt: -1 })
 
-        res.status(200).json({ success: true, message: "Successfully fetched all orders for user!", orders })
+        return res.status(200).json({
+            success: true,
+            message: orders.length ? 'Successfully fetched all orders for user!' : 'No orders found!',
+            orders,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!' })
+        return res.status(500).json({ success: false, message: 'Internal Server Error!' })
     }
 }
 
@@ -51,24 +59,35 @@ exports.createOrder = async (req, res) => {
         const userId = req.user.userId
         const { error } = createOrderSchema.validate({ products, totalAmount, paymentMethod, razorpayPaymentId, razorpayOrderId, shippingAddress })
         if(error){
-            res.status(400).json({ success: false, message: "Invalid Input!"})
+            return res.status(400).json({ success: false, message: error.details[0].message })
+        }
+
+        if (!products?.length) {
+            return res.status(400).json({ success: false, message: 'Cart is empty' })
+        }
+
+        const { calculatedTotal, orderProducts } = await validateAndBuildOrderProducts(products)
+
+        if (Math.abs(calculatedTotal - totalAmount) > 0.01) {
+            return res.status(400).json({ success: false, message: 'Order total does not match product prices' })
         }
 
         const newOrder = new Order({
             userId,
-            products,
-            totalAmount,
+            products: orderProducts,
+            totalAmount: calculatedTotal,
             paymentMethod,
-            razorpayPaymentId: razorpayPaymentId ? razorpayPaymentId : null,
-            razorpayOrderId: razorpayOrderId ? razorpayOrderId : null,
+            razorpayPaymentId: razorpayPaymentId || null,
+            razorpayOrderId: razorpayOrderId || null,
             shippingAddress
         })
 
         await newOrder.save()
+        await decrementStock(orderProducts)
 
-        res.status(201).json({ success: true, message: 'Order created successfully!', order})
+        return res.status(201).json({ success: true, message: 'Order created successfully!', order: newOrder })
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!' })
+        return res.status(500).json({ success: false, message: 'Internal Server Error!' })
     }
 }
 
@@ -88,8 +107,10 @@ exports.updateOrderStatus = async (req, res) => {
         }
 
         const updatedOrder = await Order.findByIdAndUpdate(orderId, { status }, { new: true })
+            .populate('products.product')
+            .populate('userId', 'name email')
 
-        res.status(200).json({ success: true, message: "Order status updated!", updatedOrder })
+        return res.status(200).json({ success: true, message: 'Order status updated!', updatedOrder })
     }catch(err){
         res.status(500).json({ success: false, message: 'Internal Server Error!' })
     }

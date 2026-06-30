@@ -12,12 +12,12 @@ exports.getUser = async (req, res) => {
         })
 
         if(!user){
-            res.status(404).json({ success: false, message: 'User not found!' })
+            return res.status(404).json({ success: false, message: 'User not found!' })
         }
 
-        res.status(200).json({ success: true, message: "User fetched successfully!", user})
+        return res.status(200).json({ success: true, message: "User fetched successfully!", user})
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!'})
+        return res.status(500).json({ success: false, message: 'Internal Server Error!'})
     }
 }
 
@@ -29,11 +29,11 @@ exports.getAllUsers = async (req, res) => {
         }
 
         // const totalUsers = User.countDocuments({ role: 'user' })
-        const totalUsers = users.length()
+        const totalUsers = users.length
 
-        res.status(200).json({ success: true, message: "Users fetched successfully!", users, totalUsers })
+        return res.status(200).json({ success: true, message: "Users fetched successfully!", users, totalUsers })
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!'})
+        return res.status(500).json({ success: false, message: 'Internal Server Error!'})
     }
 }
 
@@ -62,9 +62,13 @@ exports.updateUser = async (req, res) => {
 
         // await user.save()
 
-        const updatedUser = await User.findByIdAndUpdate(userId, { name, phoneNumber, address}, { new: true })
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { name, phoneNumber, address },
+            { new: true, select: '-password' },
+        )
 
-        res.status(200).json({ success: false, message: "User updated successfully!", updatedUser})
+        return res.status(200).json({ success: true, message: 'User updated successfully!', user: updatedUser })
     }catch(err){
         res.status(500).json({ success: false, message: 'Internal Server Error!'})
     }
@@ -91,9 +95,13 @@ exports.forgetPassword = async (req, res) => {
     try{
         const { email } = req.body
 
-        const user = await User.findOne({ email })
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required!" })
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase().trim() })
         if(!user){
-           res.status(404).json({ success: false, message: "User not found!" }) 
+           return res.status(404).json({ success: false, message: "User not found!" })
         }
 
         const resetPasswordOtp = generateOtp()
@@ -104,15 +112,15 @@ exports.forgetPassword = async (req, res) => {
 
         await user.save()
 
-        const isMailSent = await sendEmailForOtp(email, resetPasswordOtp)
+        const isMailSent = await sendEmailForOtp(user.email, resetPasswordOtp)
 
         if(!isMailSent){
-            res.status(500).json({ success: false, message: "Failed to send OTP email. Check server mail config!"})
+            return res.status(500).json({ success: false, message: "Failed to send OTP email. Check server mail config!"})
         }
 
-        res.status(200).json({ success: true, message: "OTP for Forget Password sent successfully!" })
+        return res.status(200).json({ success: true, message: "OTP for Forget Password sent successfully!" })
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!'})
+        return res.status(500).json({ success: false, message: 'Internal Server Error!'})
     }
 }
 
@@ -121,22 +129,25 @@ exports.resetPassword = async (req, res) => {
         const userId = req.user.userId
         const { newPassword, confirmPassword } = req.body
 
+        if (!newPassword || !confirmPassword) {
+            return res.status(400).json({ success: false, message: "Both password fields are required!" })
+        }
+
         const user = await User.findById(userId)
         if(!user){
-            res.status(404).json({ success: false, message: "User not found!" })
+            return res.status(404).json({ success: false, message: "User not found!" })
         }
 
         if(newPassword !== confirmPassword){
-            res.status(400).json({ success: false, message: "Password not matched!"})
+            return res.status(400).json({ success: false, message: "Password not matched!"})
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, parseInt(process.env.SALTS))
 
-        
-        const updatedUser = await User.findByIdAndUpdate(userId, { password: hashedPassword })
+        await User.findByIdAndUpdate(userId, { password: hashedPassword })
 
-        res.status(200).json({ success: true, message: "Password reset successfully!" })
+        return res.status(200).json({ success: true, message: "Password reset successfully!" })
     }catch(err){
-        res.status(500).json({ success: false, message: 'Internal Server Error!'})
+        return res.status(500).json({ success: false, message: 'Internal Server Error!'})
     }
 }

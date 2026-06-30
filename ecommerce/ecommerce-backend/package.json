@@ -19,7 +19,8 @@
     "joi": "^18.2.3",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.2",
-    "nodemailer": "^9.0.1"
+    "nodemailer": "^9.0.1",
+    "razorpay": "^2.9.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

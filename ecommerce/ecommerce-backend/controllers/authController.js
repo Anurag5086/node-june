@@ -93,16 +93,16 @@ exports.verifyOtpForForgetPassword = async (req, res) => {
         
         const { error } = verifyOtpSchema.validate({ email, otp })
         if(error){
-            res.status(400).json({ success: false, message: "Invalid Input!", error: error.details[0].message })
+            return res.status(400).json({ success: false, message: "Invalid Input!", error: error.details[0].message })
         }
 
-        const user = await User.findOne({ email })
+        const user = await User.findOne({ email: email.toLowerCase().trim() })
         if(!user){
-            res.status(404).json({ success: false, message: "Email not found!" })
+            return res.status(404).json({ success: false, message: "Email not found!" })
         }
 
         if(user.resetPasswordOtp !== otp || user.resetPasswordOtpExpiry < new Date()){
-            res.status(400).json({ success: false, message: "Invalid or expired OTP!"})
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP!"})
         }
 
         user.resetPasswordOtp = undefined
@@ -116,14 +116,14 @@ exports.verifyOtpForForgetPassword = async (req, res) => {
         }, process.env.JWT_SECRET,
         { expiresIn: '7d'})
 
-        res.cookie("token", token, {
+        return res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000
-        }).status(200).json({ success: true, message: "Logged in successfully!"})
+        }).status(200).json({ success: true, message: "OTP verified successfully!"})
     }catch(err){
-        res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
+        return res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
     }
 }
 

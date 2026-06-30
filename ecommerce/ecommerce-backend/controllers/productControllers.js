@@ -20,13 +20,15 @@ exports.getProductById = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
     try{
         const products = await Product.find({ isActive: true })
-        if(products.length < 1){
-            res.status(404).json({ success: false, message: "Products not available!"})
-        }
-
-        res.status(200).json({ success: true, message: "Fetched products successfully!", products })
+        return res.status(200).json({
+            success: true,
+            message: products.length
+                ? "Fetched products successfully!"
+                : "No products found!",
+            products,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: "Internal Server Error!" })
+        return res.status(500).json({ success: false, message: "Internal Server Error!" })
     }
 }
 
@@ -40,26 +42,30 @@ exports.getAllProductsForCategory = async (req, res) => {
         }
 
         const productsInCategory = await Product.find({ categoryId, isActive: true }).populate('categoryId', 'title')
-        if(productsInCategory.length < 1){
-            res.status(404).json({ success: false, message: "Products not available in this Category!"})
-        }
-
-        res.status(200).json({ success: true, message: "Fetched products for category successfully!", productsInCategory })
+        return res.status(200).json({
+            success: true,
+            message: productsInCategory.length
+                ? "Fetched products for category successfully!"
+                : "No products in this category!",
+            productsInCategory,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: "Internal Server Error!" })
+        return res.status(500).json({ success: false, message: "Internal Server Error!" })
     }
 }
 
 exports.getAllProductsForAdmin = async (req, res) => {
     try{
         const products = await Product.find()
-        if(products.length < 1){
-            res.status(404).json({ success: false, message: "Products not available!"})
-        }
-
-        res.status(200).json({ success: true, message: "Fetched products successfully!", products })
+        return res.status(200).json({
+            success: true,
+            message: products.length
+                ? "Fetched products successfully!"
+                : "No products found!",
+            products,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: "Internal Server Error!" })
+        return res.status(500).json({ success: false, message: "Internal Server Error!" })
     }
 }
 

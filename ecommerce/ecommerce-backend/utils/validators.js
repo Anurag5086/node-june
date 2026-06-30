@@ -64,22 +64,42 @@ const updateProductSchema = joi.object({
     isActive: joi.boolean().optional(),
 })
 
+const orderStatusEnum = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']
+const paymentMethodEnum = ['COD', 'Razorpay']
+
 const updateOrderStatusSchema = joi.object({
-    status: joi.string().valid(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']).required()
+    status: joi.string().valid(...orderStatusEnum).required()
 })
 
 const createOrderSchema = joi.object({
-    products: joi.array().items(
+    products: joi.array().min(1).items(
         joi.object({
             product: joi.string().required(),
             quantity: joi.number().min(1).default(1).required()
         })
-    ),
+    ).required(),
     totalAmount: joi.number().min(0).required(),
-    paymentMethod: joi.string().valid(['COD', 'Razorpay']).required(),
+    paymentMethod: joi.string().valid(...paymentMethodEnum).required(),
     razorpayPaymentId: joi.string().optional(),
     razorpayOrderId: joi.string().optional(),
     shippingAddress: joi.string().required()
+})
+
+const orderItemSchema = joi.object({
+    product: joi.string().required(),
+    quantity: joi.number().min(1).required(),
+})
+
+const createRazorpayOrderSchema = joi.object({
+    items: joi.array().min(1).items(orderItemSchema).required(),
+})
+
+const verifyRazorpayCheckoutSchema = joi.object({
+    items: joi.array().min(1).items(orderItemSchema).required(),
+    shippingAddress: joi.string().min(10).required(),
+    razorpay_order_id: joi.string().required(),
+    razorpay_payment_id: joi.string().required(),
+    razorpay_signature: joi.string().required(),
 })
 
 module.exports = {
@@ -93,5 +113,7 @@ module.exports = {
     createProductSchema,
     updateProductSchema,
     updateOrderStatusSchema,
-    createOrderSchema
+    createOrderSchema,
+    createRazorpayOrderSchema,
+    verifyRazorpayCheckoutSchema,
 }

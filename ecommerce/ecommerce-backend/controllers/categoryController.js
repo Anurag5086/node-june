@@ -24,26 +24,30 @@ exports.getCategoryById = async (req, res) => {
 exports.getAllCategories = async (req, res) => {
     try{
         const categories = await Category.find({ isActive: true })
-        if(categories.length < 1){
-            res.status(400).json({ success: false, message: "Categories not found!"})
-        }
-
-        res.status(200).json({ success: true, message: "Categories fetched successfully!", categories})
+        return res.status(200).json({
+            success: true,
+            message: categories.length
+                ? "Categories fetched successfully!"
+                : "No categories found!",
+            categories,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: "Internal Server error!" })
+        return res.status(500).json({ success: false, message: "Internal Server error!" })
     }
 }
 
 exports.getAllCategoriesForAdmin = async (req, res) => {
     try{
         const categories = await Category.find()
-        if(categories.length < 1){
-            res.status(400).json({ success: false, message: "Categories not found!"})
-        }
-
-        res.status(200).json({ success: true, message: "Categories fetched successfully!", categories})
+        return res.status(200).json({
+            success: true,
+            message: categories.length
+                ? "Categories fetched successfully!"
+                : "No categories found!",
+            categories,
+        })
     }catch(err){
-        res.status(500).json({ success: false, message: "Internal Server error!" })
+        return res.status(500).json({ success: false, message: "Internal Server error!" })
     }
 }
 
