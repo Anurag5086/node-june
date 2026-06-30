@@ -64,6 +64,24 @@ const updateProductSchema = joi.object({
     isActive: joi.boolean().optional(),
 })
 
+const updateOrderStatusSchema = joi.object({
+    status: joi.string().valid(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']).required()
+})
+
+const createOrderSchema = joi.object({
+    products: joi.array().items(
+        joi.object({
+            product: joi.string().required(),
+            quantity: joi.number().min(1).default(1).required()
+        })
+    ),
+    totalAmount: joi.number().min(0).required(),
+    paymentMethod: joi.string().valid(['COD', 'Razorpay']).required(),
+    razorpayPaymentId: joi.string().optional(),
+    razorpayOrderId: joi.string().optional(),
+    shippingAddress: joi.string().required()
+})
+
 module.exports = {
     userRegistrationSchema,
     userLoginSchema,
@@ -73,5 +91,7 @@ module.exports = {
     createCategorySchema,
     updateCategorySchema,
     createProductSchema,
-    updateProductSchema
+    updateProductSchema,
+    updateOrderStatusSchema,
+    createOrderSchema
 }
