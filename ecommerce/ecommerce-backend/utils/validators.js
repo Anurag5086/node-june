@@ -102,6 +102,21 @@ const verifyRazorpayCheckoutSchema = joi.object({
     razorpay_signature: joi.string().required(),
 })
 
+const assistantChatSchema = joi.object({
+    message: joi.string().min(1).max(1000).trim().required(),
+})
+
+const assistantSearchSchema = joi.object({
+    query: joi.string().max(200).trim().optional().allow(''),
+    minPrice: joi.number().min(0).optional(),
+    maxPrice: joi.number().min(0).optional(),
+    category: joi.string().max(100).trim().optional(),
+    inStock: joi.boolean().optional(),
+    sort: joi.string().valid('price_asc', 'price_desc', 'rating', 'newest').optional(),
+    page: joi.number().integer().min(1).optional(),
+    limit: joi.number().integer().min(1).max(50).optional(),
+})
+
 module.exports = {
     userRegistrationSchema,
     userLoginSchema,
@@ -116,4 +131,6 @@ module.exports = {
     createOrderSchema,
     createRazorpayOrderSchema,
     verifyRazorpayCheckoutSchema,
+    assistantChatSchema,
+    assistantSearchSchema,
 }

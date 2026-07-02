@@ -22,6 +22,8 @@ import AdminOrders from './pages/admin/AdminOrders'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminCategories from './pages/admin/AdminCategories'
 import AdminUsers from './pages/admin/AdminUsers'
+import Assistant from './pages/Assistant'
+import AssistantWidget from './components/assistant/AssistantWidget'
 
 export default function App() {
   return (
@@ -30,6 +32,7 @@ export default function App() {
         <CartProvider>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/assistant" element={<Assistant />} />
           <Route path="/category/:id" element={<CategoryPage />} />
           <Route path="/cart" element={<Cart />} />
 
@@ -65,6 +68,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AssistantWidget />
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
