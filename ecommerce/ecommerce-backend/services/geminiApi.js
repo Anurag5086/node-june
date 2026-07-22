@@ -5,6 +5,7 @@ const REQUEST_TIMEOUT_MS = 30000
 
 const MODEL_FALLBACKS = [
     process.env.GEMINI_MODEL,
+    'gemini-flash-latest',
     'gemini-2.0-flash-lite',
     'gemini-2.0-flash',
     'gemini-2.5-flash',
@@ -98,7 +99,7 @@ async function getModelFallbacks(ctx) {
             return supported
         }
 
-        const preferred = ['gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-flash']
+        const preferred = ['gemini-flash-latest', 'gemini-2.0-flash-lite', 'gemini-2.0-flash', 'gemini-2.5-flash']
         const autoPick = preferred.filter((model) => available.includes(model))
         if (autoPick.length > 0) {
             cachedModels = autoPick
