@@ -2,7 +2,7 @@ const User = require('../models/User')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const { userRegistrationSchema, userLoginSchema, verifyOtpSchema, resendOtpSchema } = require('../utils/validators')
-const { generateOtp, generateOtpExpiry } = require('../utils/common')
+const { generateOtp, generateOtpExpiry, getAuthCookieOptions } = require('../utils/common')
 const sendEmailForOtp = require('../utils/nodemailer')
 
 exports.registerUser = async (req, res) => {
@@ -76,12 +76,8 @@ exports.verifyOtp = async (req, res) => {
         }, process.env.JWT_SECRET,
         { expiresIn: '7d'})
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        }).status(200).json({ success: true, message: "Logged in successfully!"})
+        res.cookie("token", token, getAuthCookieOptions())
+            .status(200).json({ success: true, message: "Logged in successfully!"})
     }catch(err){
         res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
     }
@@ -116,12 +112,8 @@ exports.verifyOtpForForgetPassword = async (req, res) => {
         }, process.env.JWT_SECRET,
         { expiresIn: '7d'})
 
-        return res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        }).status(200).json({ success: true, message: "OTP verified successfully!"})
+        return res.cookie("token", token, getAuthCookieOptions())
+            .status(200).json({ success: true, message: "OTP verified successfully!"})
     }catch(err){
         return res.status(500).json({ success: false, message: "Internal Server Error!", error: err})
     }
@@ -186,12 +178,8 @@ exports.loginUser = async (req, res) => {
             }, process.env.JWT_SECRET,
             { expiresIn: '7d'})
 
-            res.cookie("token", token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: 'lax',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            }).status(200).json({ success: true, message: "Logged in successfully!"})
+            return res.cookie("token", token, getAuthCookieOptions())
+                .status(200).json({ success: true, message: "Logged in successfully!"})
         }
 
         res.status(200).json({ success: true, message: "Login successful, but email is not verified!", token: null, isVerified: user.isVerified })
